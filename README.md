@@ -49,7 +49,7 @@ pip install pandas
 
 ## Usage
 
-Print the cleaned orders (run from the project root):
+Print the cleaned orders and revenue by category (run from the project root):
 
 ```bash
 python -m src.data_cleaning
@@ -62,3 +62,7 @@ Cleaning runs in two stages:
 2. **Fill missing categories**: a missing category is taken from other orders of the
    same product, but only if that product has exactly one known category.
    Products with no known category, or with conflicting ones, stay `<NA>`.
+
+Revenue per order is `qty * unit_price`. Category totals are summed with a pandas
+`groupby`, sorted highest first. Orders whose category is still missing are kept
+as an `<NA>` row so no revenue is silently dropped.
