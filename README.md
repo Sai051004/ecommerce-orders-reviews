@@ -49,11 +49,16 @@ pip install pandas
 
 ## Usage
 
-Print the normalized orders (run from the project root):
+Print the cleaned orders (run from the project root):
 
 ```bash
 python -m src.data_cleaning
 ```
 
-Normalization trims and collapses whitespace and title-cases `product` and `category`.
-Blank categories become missing values (`<NA>`); they are not filled in yet.
+Cleaning runs in two stages:
+
+1. **Normalize**: trim and collapse whitespace and title-case `product` and `category`.
+   Blank categories become missing values (`<NA>`).
+2. **Fill missing categories**: a missing category is taken from other orders of the
+   same product, but only if that product has exactly one known category.
+   Products with no known category, or with conflicting ones, stay `<NA>`.
