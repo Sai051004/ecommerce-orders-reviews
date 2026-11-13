@@ -114,9 +114,13 @@ if __name__ == "__main__":
     normalized_df = normalize_orders(df)
     cleaned_df = fill_missing_categories(normalized_df)
     category_revenue = calculate_category_revenue(cleaned_df)
+    top_products = get_top_selling_products(cleaned_df, top_n=2)
 
     print("\nCleaned Orders:")
     print(cleaned_df.to_string(index=False))
 
     print("\nRevenue by Category:")
     print(category_revenue.to_string(index=False))
+
+    print("\nTop 2 Best-Selling Products:")
+    print(top_products.to_string(index=False))
