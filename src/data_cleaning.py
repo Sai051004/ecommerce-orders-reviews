@@ -64,5 +64,7 @@ def fill_missing_categories(df: pd.DataFrame) -> pd.DataFrame:
 
 if __name__ == "__main__":
     orders_path = Path(__file__).resolve().parent.parent / "data" / "orders.json"
-    orders = load_orders(str(orders_path))
-    print(normalize_orders(orders).to_string(index=False))
+    df = load_orders(str(orders_path))
+    df = normalize_orders(df)
+    df = fill_missing_categories(df)
+    print(df.to_string(index=False))
