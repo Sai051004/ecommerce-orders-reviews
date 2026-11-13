@@ -1,4 +1,4 @@
-"""Load the raw orders dataset and normalize its text columns."""
+"""Load the raw orders dataset, normalize its text columns, and fill missing categories."""
 
 import json
 from pathlib import Path
@@ -36,6 +36,30 @@ def normalize_orders(df: pd.DataFrame) -> pd.DataFrame:
     for column in TEXT_COLUMNS:
         normalized[column] = _normalize_text(normalized[column])
     return normalized
+
+
+def fill_missing_categories(df: pd.DataFrame) -> pd.DataFrame:
+    """Fill missing categories from other orders of the same product.
+
+    A category is filled only when the product has exactly one known category.
+    Products with no known category, or with conflicting ones, stay missing.
+    Expects a DataFrame already passed through normalize_orders().
+    """
+    filled = df.copy()
+
+    known = filled.dropna(subset=["product", "category"])
+    category_counts = known.groupby("product")["category"].nunique()
+    unambiguous_products = category_counts[category_counts == 1].index
+
+    product_to_category = (
+        known[known["product"].isin(unambiguous_products)]
+        .drop_duplicates(subset="product")
+        .set_index("product")["category"]
+    )
+
+    inferred = filled["product"].map(product_to_category).astype("string")
+    filled["category"] = filled["category"].fillna(inferred)
+    return filled
 
 
 if __name__ == "__main__":
