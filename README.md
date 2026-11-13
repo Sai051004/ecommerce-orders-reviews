@@ -27,7 +27,8 @@ ecommerce-orders-reviews/
 ├── data/
 │   └── orders.json   # raw input, unmodified
 ├── src/
-│   └── __init__.py
+│   ├── __init__.py
+│   └── data_cleaning.py   # load + normalize orders
 ├── .gitignore
 └── README.md
 ```
@@ -37,4 +38,22 @@ ecommerce-orders-reviews/
 - Python 3
 - pandas
 
-Setup and run instructions will be added as the implementation progresses.
+## Setup
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+# source .venv/bin/activate   # macOS / Linux
+pip install pandas
+```
+
+## Usage
+
+Print the normalized orders (run from the project root):
+
+```bash
+python -m src.data_cleaning
+```
+
+Normalization trims and collapses whitespace and title-cases `product` and `category`.
+Blank categories become missing values (`<NA>`); they are not filled in yet.
