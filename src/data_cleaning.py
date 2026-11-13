@@ -1,4 +1,4 @@
-"""Load and clean the raw orders dataset, then summarize revenue by category."""
+"""Load and clean the raw orders dataset, then report revenue by category and top sellers."""
 
 import json
 from pathlib import Path
@@ -81,6 +81,28 @@ def calculate_category_revenue(df: pd.DataFrame) -> pd.DataFrame:
         .sum()
         .reset_index(name="total_revenue")
         .sort_values("total_revenue", ascending=False, kind="stable")
+        .reset_index(drop=True)
+    )
+
+
+def get_top_selling_products(df: pd.DataFrame, top_n: int = 2) -> pd.DataFrame:
+    """Top `top_n` products by total quantity sold, highest first.
+
+    Ties are ordered alphabetically by product name. Orders with a missing
+    product name are excluded, since they cannot be attributed to a product.
+    If `top_n` exceeds the number of products, all products are returned.
+    """
+    if isinstance(top_n, bool) or not isinstance(top_n, int):
+        raise TypeError(f"top_n must be an integer, got {type(top_n).__name__}")
+    if top_n < 1:
+        raise ValueError(f"top_n must be at least 1, got {top_n}")
+
+    return (
+        df.groupby("product", dropna=True)["qty"]
+        .sum()
+        .reset_index(name="total_quantity")
+        .sort_values(["total_quantity", "product"], ascending=[False, True])
+        .head(top_n)
         .reset_index(drop=True)
     )
 
