@@ -88,6 +88,13 @@ def calculate_category_revenue(df: pd.DataFrame) -> pd.DataFrame:
 if __name__ == "__main__":
     orders_path = Path(__file__).resolve().parent.parent / "data" / "orders.json"
     df = load_orders(str(orders_path))
-    df = normalize_orders(df)
-    df = fill_missing_categories(df)
-    print(df.to_string(index=False))
+
+    normalized_df = normalize_orders(df)
+    cleaned_df = fill_missing_categories(normalized_df)
+    category_revenue = calculate_category_revenue(cleaned_df)
+
+    print("\nCleaned Orders:")
+    print(cleaned_df.to_string(index=False))
+
+    print("\nRevenue by Category:")
+    print(category_revenue.to_string(index=False))
