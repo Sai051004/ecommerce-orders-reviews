@@ -1,4 +1,4 @@
-"""Load the raw orders dataset, normalize its text columns, and fill missing categories."""
+"""Load and clean the raw orders dataset, then summarize revenue by category."""
 
 import json
 from pathlib import Path
@@ -67,6 +67,22 @@ def add_order_revenue(df: pd.DataFrame) -> pd.DataFrame:
     with_revenue = df.copy()
     with_revenue["revenue"] = with_revenue["qty"] * with_revenue["unit_price"]
     return with_revenue
+
+
+def calculate_category_revenue(df: pd.DataFrame) -> pd.DataFrame:
+    """Total revenue per category, highest first.
+
+    Orders with a missing category are kept as their own <NA> group so their
+    revenue is not silently dropped. Ties are ordered alphabetically by category.
+    """
+    orders = add_order_revenue(df)
+    return (
+        orders.groupby("category", dropna=False)["revenue"]
+        .sum()
+        .reset_index(name="total_revenue")
+        .sort_values("total_revenue", ascending=False, kind="stable")
+        .reset_index(drop=True)
+    )
 
 
 if __name__ == "__main__":
