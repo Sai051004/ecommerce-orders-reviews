@@ -62,6 +62,13 @@ def fill_missing_categories(df: pd.DataFrame) -> pd.DataFrame:
     return filled
 
 
+def add_order_revenue(df: pd.DataFrame) -> pd.DataFrame:
+    """Return a copy of the orders with a revenue column (qty * unit_price)."""
+    with_revenue = df.copy()
+    with_revenue["revenue"] = with_revenue["qty"] * with_revenue["unit_price"]
+    return with_revenue
+
+
 if __name__ == "__main__":
     orders_path = Path(__file__).resolve().parent.parent / "data" / "orders.json"
     df = load_orders(str(orders_path))
