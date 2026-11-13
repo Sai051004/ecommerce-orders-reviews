@@ -1,6 +1,7 @@
 """Load the raw orders dataset and normalize its text columns."""
 
 import json
+from pathlib import Path
 
 import pandas as pd
 
@@ -35,3 +36,9 @@ def normalize_orders(df: pd.DataFrame) -> pd.DataFrame:
     for column in TEXT_COLUMNS:
         normalized[column] = _normalize_text(normalized[column])
     return normalized
+
+
+if __name__ == "__main__":
+    orders_path = Path(__file__).resolve().parent.parent / "data" / "orders.json"
+    orders = load_orders(str(orders_path))
+    print(normalize_orders(orders).to_string(index=False))
