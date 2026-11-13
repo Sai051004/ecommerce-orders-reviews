@@ -49,7 +49,8 @@ pip install pandas
 
 ## Usage
 
-Print the cleaned orders and revenue by category (run from the project root):
+Print the cleaned orders, revenue by category, and top 2 best-selling products
+(run from the project root):
 
 ```bash
 python -m src.data_cleaning
@@ -66,3 +67,7 @@ Cleaning runs in two stages:
 Revenue per order is `qty * unit_price`. Category totals are summed with a pandas
 `groupby`, sorted highest first. Orders whose category is still missing are kept
 as an `<NA>` row so no revenue is silently dropped.
+
+Best-selling products are ranked by total `qty` per normalized product name, highest
+first, with ties broken alphabetically. Orders with a missing product name are
+excluded from this ranking because they cannot be attributed to a product.
