@@ -73,7 +73,8 @@ def build_knowledge_graph(
     Repeated purchases of the same product by one customer become a single
     "purchased" edge (a DiGraph keeps at most one edge per direction between two nodes).
     A product with a missing or conflicting category gets no "belongsTo" edge.
-    Any reference to an unknown order, review, product or customer raises ValueError.
+    Any reference to an unknown order, review, product or customer, or an order or
+    review listed more than once, raises ValueError.
     """
     graph = nx.DiGraph()
 
@@ -142,11 +143,15 @@ def build_knowledge_graph(
         )
 
     # Customer -wrote-> Review and Review -about-> Product, via the synthetic review mapping.
+    seen_reviews = set()
     for record in graph_data["review_relationships"]:
         review_id = record.get("review_id")
         product_name = record.get("product_name")
         if not graph.has_node(review_node(str(review_id))):
             raise ValueError(f"review_relationships references unknown review: {review_id!r}")
+        if review_id in seen_reviews:
+            raise ValueError(f"Review {review_id!r} is linked more than once")
+        seen_reviews.add(review_id)
         if product_name not in product_ids:
             raise ValueError(
                 f"review_relationships references unknown product: {product_name!r}"
