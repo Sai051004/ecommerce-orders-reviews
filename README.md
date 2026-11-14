@@ -41,14 +41,22 @@ ecommerce-orders-reviews/
 │   ├── sentiment_evaluation.py      # Part B1: accuracy, errors, metrics, confusion matrix
 │   └── knowledge_graph.py           # Part B2: build the graph and run the query
 ├── .gitignore
+├── requirements.txt
 └── README.md
 ```
 
 ## Installation
 
-Developed and verified with Python 3.11 (pandas 3.1, scikit-learn 1.9, NetworkX 3.6).
-Dependencies are installed directly with pip. No configuration, environment variables or
-API keys are needed.
+Requires Python 3.11. Dependencies are listed in [`requirements.txt`](requirements.txt):
+
+| Package | Supported versions | Tested with |
+|---|---|---|
+| pandas | 2.2.2 – 3.x | 2.2.2 and 3.1.1 |
+| scikit-learn | 1.4.2 – 1.x | 1.4.2 and 1.9.1 |
+| NetworkX | 3.2 – 3.x | 3.2 and 3.6.1 |
+
+Both the oldest and the newest versions in each range give identical output. No
+configuration, environment variables or API keys are needed.
 
 ```bash
 git clone https://github.com/Sai051004/ecommerce-orders-reviews.git
@@ -58,7 +66,7 @@ python -m venv .venv
 .venv\Scripts\activate          # Windows
 source .venv/bin/activate       # macOS / Linux
 
-pip install pandas scikit-learn networkx
+pip install -r requirements.txt
 ```
 
 ## Running the project
