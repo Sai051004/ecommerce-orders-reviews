@@ -6,6 +6,7 @@ from pathlib import Path
 import pandas as pd
 
 LABEL_COLUMNS = ["reference_label", "predicted_label"]
+ERROR_COLUMNS = ["review_id", "review_text", *LABEL_COLUMNS]
 
 
 def load_reviews(file_path: str) -> pd.DataFrame:
@@ -37,6 +38,19 @@ def calculate_accuracy(df: pd.DataFrame) -> float:
 
     correct = is_correct(df)
     return float(correct.sum() / len(df))
+
+
+def analyze_errors(df: pd.DataFrame) -> pd.DataFrame:
+    """Return only the misclassified reviews, with their text and both labels.
+
+    Returns an empty DataFrame with the same columns when every prediction is correct.
+    """
+    missing_columns = [col for col in ERROR_COLUMNS if col not in df.columns]
+    if missing_columns:
+        raise ValueError(f"Missing required columns: {missing_columns}")
+
+    wrong = ~is_correct(df)
+    return df.loc[wrong, ERROR_COLUMNS].reset_index(drop=True)
 
 
 if __name__ == "__main__":
