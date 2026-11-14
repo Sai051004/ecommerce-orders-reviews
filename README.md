@@ -22,8 +22,8 @@ The project implements three components:
 - **scikit-learn**: precision, recall, F1 and confusion matrix (Part B1)
 - **NetworkX**: the in-memory knowledge graph and its query (Part B2)
 
-A Cypher version of the graph query is included as a text file only. No Neo4j database,
-driver or LLM API is used.
+A Cypher version of the graph query is included as a text file. It was checked once on
+Neo4j, but no Neo4j database, driver or LLM API is needed to run the project.
 
 ## Project structure
 
@@ -340,5 +340,5 @@ Not implemented. Possible next steps:
 
 - A larger, representative labelled dataset for the sentiment evaluation.
 - Automated regression checks for the three parts.
-- Loading the graph into a graph database such as Neo4j and running the Cypher query there.
+- Storing the graph permanently in Neo4j instead of rebuilding it in memory on every run.
 - Fuzzy matching of near-duplicate product names (e.g. `Wireless-Mouse` vs `Wireless Mouse`).
