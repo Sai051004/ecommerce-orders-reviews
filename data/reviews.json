@@ -1,0 +1,6 @@
+[
+  {"review_id": "R1", "review_text": "Works fine but the battery died in a week.", "reference_label": "mixed", "predicted_label": "positive"},
+  {"review_id": "R2", "review_text": "Exactly what I needed, five stars!", "reference_label": "positive", "predicted_label": "positive"},
+  {"review_id": "R3", "review_text": "Arrived broken, waste of money.", "reference_label": "negative", "predicted_label": "negative"},
+  {"review_id": "R4", "review_text": "It's okay, nothing special.", "reference_label": "neutral", "predicted_label": "positive"}
+]
