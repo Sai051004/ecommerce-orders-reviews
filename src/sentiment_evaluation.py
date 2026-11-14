@@ -70,3 +70,7 @@ if __name__ == "__main__":
     print(f"Correct Predictions: {correct.sum()}")
     print(f"Incorrect Predictions: {(~correct).sum()}")
     print(f"Accuracy: {accuracy:.2%}")
+
+    errors = analyze_errors(reviews)
+    print("\nMisclassified Reviews:")
+    print(errors.to_string(index=False))
