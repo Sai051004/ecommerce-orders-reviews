@@ -10,10 +10,10 @@ Coding assignment for the Duck Creek Technologies Associate Software Engineer (A
 - Calculates total revenue by category.
 - Identifies the top 2 best-selling products by quantity.
 
-**Part B1** scores LLM-generated sentiment labels against reference labels. See
-[Part B1: Sentiment evaluation](#part-b1-sentiment-evaluation).
+**Part B1** evaluates LLM-generated sentiment labels against reference labels. See
+[Part B1 — LLM Sentiment Evaluation](#part-b1--llm-sentiment-evaluation).
 
-**Part B2** (knowledge graph) is not yet implemented. See [Future work](#future-work).
+**Part B2** (knowledge graph) is not yet implemented. See [Remaining work](#remaining-work).
 
 ## Problem statement
 
@@ -184,77 +184,88 @@ defaults to 2 and must be a positive integer.
   prices. A production financial system should use integer cents or `decimal.Decimal`
   to avoid rounding errors (e.g. `0.1 + 0.1 + 0.1 = 0.30000000000000004`).
 
-## Part B1: Sentiment evaluation
+## Part B1 — LLM Sentiment Evaluation
 
-The LLM predictions are given in the assignment and stored in
-[`data/reviews.json`](data/reviews.json). No LLM is called. From the repository root:
+### Problem statement
+
+The assignment provides four customer reviews, each with a reference sentiment label and
+an LLM-generated prediction. The goal is to score the predictions against the references
+and discuss the ambiguous or borderline cases.
+
+### Evaluation dataset
+
+The four reviews are stored exactly as given in [`data/reviews.json`](data/reviews.json).
+
+| Review ID | Review | Reference | LLM prediction |
+|---|---|---|---|
+| R1 | "Works fine but the battery died in a week." | mixed | positive |
+| R2 | "Exactly what I needed, five stars!" | positive | positive |
+| R3 | "Arrived broken, waste of money." | negative | negative |
+| R4 | "It's okay, nothing special." | neutral | positive |
+
+The predictions are supplied by the assignment. No live LLM API is called.
+
+### Evaluation methodology
+
+All logic is in [`src/sentiment_evaluation.py`](src/sentiment_evaluation.py):
+
+1. **Load** the reviews from JSON into a pandas DataFrame.
+2. **Compare** reference and predicted labels row by row, ignoring case and surrounding
+   whitespace. A missing label counts as incorrect.
+3. **Accuracy** = correct predictions / total predictions. Empty input raises an error.
+4. **Error analysis** returns only the misclassified reviews with their text and labels.
+5. **Per-class precision, recall and F1** (scikit-learn) for the four classes in a fixed
+   order: positive, negative, neutral, mixed. Labels outside these four raise an error
+   instead of being silently dropped.
+6. **Macro average** (each class weighted equally) and **weighted average** (each class
+   weighted by its number of examples).
+7. **Confusion matrix** with actual labels as rows and predicted labels as columns, always
+   including all four classes.
+
+### Evaluation results
+
+**Accuracy: 50% (2 of 4 correct). Macro F1: 0.3750.**
+
+| Class | Precision | Recall | F1 | Support |
+|---|---:|---:|---:|---:|
+| positive | 0.3333 | 1.0000 | 0.5000 | 1 |
+| negative | 1.0000 | 1.0000 | 1.0000 | 1 |
+| neutral | 0.0000 | 0.0000 | 0.0000 | 1 |
+| mixed | 0.0000 | 0.0000 | 0.0000 | 1 |
+| **macro avg** | 0.3333 | 0.5000 | 0.3750 | |
+| **weighted avg** | 0.3333 | 0.5000 | 0.3750 | |
+
+Macro F1 is the mean of the per-class F1 scores: (0.5 + 1.0 + 0 + 0) / 4 = 0.375. The
+weighted average equals the macro average because every class has exactly one example.
+
+Confusion matrix (rows = actual, columns = predicted):
+
+| Actual \ Predicted | positive | negative | neutral | mixed |
+|---|---:|---:|---:|---:|
+| **positive** | 1 | 0 | 0 | 0 |
+| **negative** | 0 | 1 | 0 | 0 |
+| **neutral** | 1 | 0 | 0 | 0 |
+| **mixed** | 1 | 0 | 0 | 0 |
+
+R2 and R3 are on the diagonal (correct). R4 (neutral) and R1 (mixed) were both predicted
+positive, and the neutral and mixed columns are empty.
+
+### Running Part B1
+
+From the repository root:
 
 ```bash
 python -m src.sentiment_evaluation
 ```
 
-Output:
+This prints the per-review results, accuracy, misclassified reviews, per-class and averaged
+metrics, and the confusion matrix.
 
-```text
-Per-review results:
-review_id reference_label predicted_label  correct
-       R1           mixed        positive    False
-       R2        positive        positive     True
-       R3        negative        negative     True
-       R4         neutral        positive    False
+## Remaining work
 
-Total Reviews: 4
-Correct Predictions: 2
-Incorrect Predictions: 2
-Accuracy: 50.00%
+**Part B2: Knowledge graph modeling** (not yet implemented):
 
-Misclassified Reviews:
-review_id                                review_text reference_label predicted_label
-       R1 Works fine but the battery died in a week.           mixed        positive
-       R4                It's okay, nothing special.         neutral        positive
-
-Per-Class Metrics:
-          precision  recall     f1  support
-positive     0.3333  1.0000 0.5000        1
-negative     1.0000  1.0000 1.0000        1
-neutral      0.0000  0.0000 0.0000        1
-mixed        0.0000  0.0000 0.0000        1
-
-Averaged Metrics:
-          precision  recall     f1
-macro        0.3333  0.5000 0.3750
-weighted     0.3333  0.5000 0.3750
-
-Accuracy: 0.5000
-
-Confusion Matrix (rows = actual, columns = predicted):
-predicted  positive  negative  neutral  mixed
-actual                                       
-positive          1         0        0      0
-negative          0         1        0      0
-neutral           1         0        0      0
-mixed             1         0        0      0
-```
-
-**Accuracy = correct predictions / total predictions = 2 / 4 = 50%.** Labels are compared
-ignoring case and surrounding whitespace. A missing label counts as incorrect, and an empty
-dataset raises an error instead of returning a misleading score.
-
-**Per-class metrics** (scikit-learn) are computed for the four classes in a fixed order:
-positive, negative, neutral, mixed. Any label outside these four, or a missing label,
-raises an error instead of being silently dropped. The model never predicts `neutral` or
-`mixed`, so their precision is undefined (0 / 0). It is reported as 0 (`zero_division=0`),
-and their recall is 0 because their only example was missed. The confusion matrix shows both
-errors land in the `positive` column, which holds 3 of the 4 predictions.
-
-Both errors are borderline reviews (mixed and neutral) that the LLM labelled positive. The
-discussion of each case and the limits of this evaluation are in
-[`docs/sentiment_error_analysis.md`](docs/sentiment_error_analysis.md).
-
-## Future work
-
-Remaining assignment requirements:
-
-- **B2**: Model `Customer —purchased→ Product —belongsTo→ Category` as a knowledge graph.
-- **B2**: Write a graph query that finds all products purchased by customers who left at
-  least one negative review.
+- Model `Customer`, `Product`, `Category` and `Review` entities and their relationships
+  (e.g. `Customer —purchased→ Product —belongsTo→ Category`).
+- Implement graph traversal and querying.
+- Find all products purchased by customers who left at least one negative review.
