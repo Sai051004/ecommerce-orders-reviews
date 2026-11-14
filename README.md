@@ -250,6 +250,37 @@ Confusion matrix (rows = actual, columns = predicted):
 R2 and R3 are on the diagonal (correct). R4 (neutral) and R1 (mixed) were both predicted
 positive, and the neutral and mixed columns are empty.
 
+### Error analysis
+
+**R1: "Works fine but the battery died in a week."**: reference *mixed*, predicted *positive*.
+The review contains both positive ("works fine") and negative ("battery died in a week")
+sentiment. The prediction reflects the positive phrase and misses the complaint. The battery
+failure makes the review *mixed*, or even *negative* under some annotation guidelines.
+
+**R4: "It's okay, nothing special."**: reference *neutral*, predicted *positive*.
+"Okay" does not necessarily mean positive, and "nothing special" suggests an average or
+underwhelming experience. The line between *neutral* and *mildly positive* is subjective.
+
+The two clear-cut reviews (R2 positive, R3 negative) were classified correctly. A fuller
+discussion is in [`docs/sentiment_error_analysis.md`](docs/sentiment_error_analysis.md).
+
+### Evaluation limitations
+
+- **Only four reviews.** Each review moves accuracy by 25 percentage points, and every
+  per-class score can only be 0, 0.5 or 1.
+- **Too small for reliable estimates.** These results describe these four reviews, not how
+  the model would perform on new data. They are not enough to conclude that the model is
+  generally biased in any direction.
+- **Sentiment labels are subjective.** The reference labels for R1 and R4 are reasonable
+  but debatable, so the references are not automatically correct.
+- **The model never predicts `mixed` or `neutral`** in this sample, so those classes
+  have zero recall.
+- **Undefined metrics.** Precision for a class that is never predicted is 0 / 0. It is
+  reported as 0 using `zero_division=0`.
+- **For production evaluation**, a larger, representative labelled dataset covering all
+  four classes is needed, with clear annotation guidelines (e.g. when a complaint turns
+  *mixed* into *negative*) and ideally several annotators per review.
+
 ### Running Part B1
 
 From the repository root:
