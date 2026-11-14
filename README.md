@@ -37,10 +37,12 @@ ecommerce-orders-reviews/
 ├── data/
 │   ├── orders.json              # Part A raw input: the five original orders, never modified
 │   └── reviews.json             # Part B1 input: four reviews with reference and LLM labels
+├── docs/
+│   └── sentiment_error_analysis.md  # Part B1: discussion of misclassified / borderline reviews
 ├── src/
 │   ├── __init__.py
 │   ├── data_cleaning.py         # Part A pipeline: load, clean, revenue, top sellers
-│   └── sentiment_evaluation.py  # Part B1: sentiment label accuracy
+│   └── sentiment_evaluation.py  # Part B1: sentiment accuracy and error analysis
 ├── .gitignore
 └── README.md
 ```
@@ -204,17 +206,25 @@ Total Reviews: 4
 Correct Predictions: 2
 Incorrect Predictions: 2
 Accuracy: 50.00%
+
+Misclassified Reviews:
+review_id                                review_text reference_label predicted_label
+       R1 Works fine but the battery died in a week.           mixed        positive
+       R4                It's okay, nothing special.         neutral        positive
 ```
 
 **Accuracy = correct predictions / total predictions = 2 / 4 = 50%.** Labels are compared
 ignoring case and surrounding whitespace. A missing label counts as incorrect, and an empty
 dataset raises an error instead of returning a misleading score.
 
+Both errors are borderline reviews (mixed and neutral) that the LLM labelled positive. The
+discussion of each case and the limits of this evaluation are in
+[`docs/sentiment_error_analysis.md`](docs/sentiment_error_analysis.md).
+
 ## Future work
 
 Remaining assignment requirements:
 
-- **B1**: Discuss the ambiguous and borderline sentiment cases.
 - **B2**: Model `Customer —purchased→ Product —belongsTo→ Category` as a knowledge graph.
 - **B2**: Write a graph query that finds all products purchased by customers who left at
   least one negative review.
