@@ -1,0 +1,21 @@
+{
+  "metadata": {
+    "data_type": "synthetic_demo",
+    "description": "Synthetic customer and review relationships for demonstrating the knowledge graph assignment.",
+    "note": "Customer IDs, order-to-customer assignments and review-to-customer/product associations are invented for this demo. Order IDs, product names, review IDs and review texts come unchanged from data/orders.json and data/reviews.json.",
+    "sources": ["data/orders.json", "data/reviews.json"]
+  },
+  "order_customers": [
+    {"order_id": "O1", "customer_id": "C2"},
+    {"order_id": "O2", "customer_id": "C3"},
+    {"order_id": "O3", "customer_id": "C1"},
+    {"order_id": "O4", "customer_id": "C1"},
+    {"order_id": "O5", "customer_id": "C1"}
+  ],
+  "review_relationships": [
+    {"review_id": "R1", "customer_id": "C2", "product_name": "Wireless Mouse"},
+    {"review_id": "R2", "customer_id": "C1", "product_name": "Yoga Mat"},
+    {"review_id": "R3", "customer_id": "C1", "product_name": "Desk Lamp"},
+    {"review_id": "R4", "customer_id": "C3", "product_name": "Wireless Mouse"}
+  ]
+}
