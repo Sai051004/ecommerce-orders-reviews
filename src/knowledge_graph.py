@@ -243,3 +243,11 @@ if __name__ == "__main__":
     print("\nRelationship Types:")
     for relationship, count in summary["relationships"].items():
         print(f"{relationship}: {count}")
+
+    products = find_products_purchased_by_negative_reviewers(knowledge_graph)
+    print("\nProducts Purchased by Customers with Negative Reviews:")
+    if products:
+        for product in products:
+            print(f"- {product}")
+    else:
+        print("None (no customer has written a negative review)")
