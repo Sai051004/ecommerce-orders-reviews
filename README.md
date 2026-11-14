@@ -1,57 +1,61 @@
-# E-Commerce Orders & Reviews
+# E-Commerce Orders & Reviews — Duck Creek Assignment
 
 Coding assignment for the Duck Creek Technologies Associate Software Engineer (AI) role.
 
-**Part A** is a Python and pandas data-processing pipeline that:
+## Project overview
 
-- Loads raw e-commerce orders from JSON.
-- Normalizes inconsistent product and category names.
-- Infers missing categories from existing records.
-- Calculates total revenue by category.
-- Identifies the top 2 best-selling products by quantity.
+The project implements three components:
 
-**Part B1** evaluates LLM-generated sentiment labels against reference labels. See
-[Part B1 — LLM Sentiment Evaluation](#part-b1--llm-sentiment-evaluation).
+1. **Order data cleaning and aggregation (Part A).** Cleans a messy orders dataset
+   (inconsistent casing, a missing category), then computes total revenue per category and
+   the top 2 best-selling products by quantity.
+2. **LLM sentiment classification evaluation (Part B1).** Scores LLM-generated sentiment
+   labels against reference labels and discusses the ambiguous cases.
+3. **Knowledge graph modeling and querying (Part B2).** Builds a
+   `Customer —purchased→ Product —belongsTo→ Category` graph and finds all products
+   purchased by customers who left at least one negative review.
 
-**Part B2** (knowledge graph) is not yet implemented. See [Remaining work](#remaining-work).
+A final verification report is in [`docs/final_verification.md`](docs/final_verification.md).
 
-## Problem statement
+## Tech stack
 
-> Clean this messy orders dataset (inconsistent casing, missing category) and compute:
->
-> 1. Total revenue per category.
-> 2. The top 2 best-selling products by quantity.
+- **Python 3.11**
+- **pandas**: loading, cleaning and aggregating the data
+- **scikit-learn**: precision, recall, F1 and confusion matrix (Part B1)
+- **NetworkX**: the in-memory knowledge graph and its query (Part B2)
 
-The raw data in [`data/orders.json`](data/orders.json) has three problems:
-
-| Issue | Example |
-|---|---|
-| Inconsistent product casing | `Wireless Mouse` (O1) vs `wireless mouse` (O2) |
-| Inconsistent category casing | `electronics` (O1) vs `Electronics` (O2) |
-| Missing category | O3 `Yoga Mat` has category `""` |
+A Cypher version of the graph query is included as a text file only. No Neo4j database,
+driver or LLM API is used.
 
 ## Project structure
 
 ```text
 ecommerce-orders-reviews/
 ├── data/
-│   ├── orders.json              # Part A raw input: the five original orders, never modified
-│   └── reviews.json             # Part B1 input: four reviews with reference and LLM labels
+│   ├── orders.json                  # Part A input: the five original orders (unmodified)
+│   ├── reviews.json                 # Part B1 input: the four original reviews (unmodified)
+│   └── graph_demo.json              # Part B2: SYNTHETIC customer / review links for the demo
 ├── docs/
-│   └── sentiment_error_analysis.md  # Part B1: discussion of misclassified / borderline reviews
+│   ├── sentiment_error_analysis.md  # Part B1: misclassified and borderline reviews
+│   ├── knowledge_graph_design.md    # Part B2: graph schema, demo data, modeling decisions
+│   ├── cypher_query_explanation.md  # Part B2: equivalent Cypher query, clause by clause
+│   └── final_verification.md        # Requirement checklist and verified results
+├── queries/
+│   └── negative_review_customers.cypher  # Part B2: equivalent Neo4j Cypher query
 ├── src/
 │   ├── __init__.py
-│   ├── data_cleaning.py         # Part A pipeline: load, clean, revenue, top sellers
-│   └── sentiment_evaluation.py  # Part B1: accuracy, error analysis, precision/recall/F1, confusion matrix
+│   ├── data_cleaning.py             # Part A: load, clean, revenue, top sellers
+│   ├── sentiment_evaluation.py      # Part B1: accuracy, errors, metrics, confusion matrix
+│   └── knowledge_graph.py           # Part B2: build the graph and run the query
 ├── .gitignore
 └── README.md
 ```
 
-## Installation and setup
+## Installation
 
-Requires Python 3, pandas, scikit-learn and NetworkX (developed with Python 3.11, pandas 3.1,
-scikit-learn 1.9 and NetworkX 3.6). scikit-learn is only used by the Part B1 metrics, and
-NetworkX only by the Part B2 knowledge graph.
+Developed and verified with Python 3.11 (pandas 3.1, scikit-learn 1.9, NetworkX 3.6).
+Dependencies are installed directly with pip. No configuration, environment variables or
+API keys are needed.
 
 ```bash
 git clone https://github.com/Sai051004/ecommerce-orders-reviews.git
@@ -64,15 +68,22 @@ source .venv/bin/activate       # macOS / Linux
 pip install pandas scikit-learn networkx
 ```
 
-## Running Part A
+## Running the project
 
-From the repository root:
+Run each part from the repository root, as a module (`python -m`):
 
 ```bash
-python -m src.data_cleaning
+python -m src.data_cleaning          # Part A
+python -m src.sentiment_evaluation   # Part B1
+python -m src.knowledge_graph        # Part B2
 ```
 
-Output:
+`src.knowledge_graph` imports the Part A and B1 loaders, so it must be run with `-m` from
+the root (`python src/knowledge_graph.py` fails with `ModuleNotFoundError: No module named 'src'`).
+
+## Part A — Order cleaning and aggregation
+
+### Results
 
 ```text
 Cleaned Orders:
@@ -95,58 +106,6 @@ Top 2 Best-Selling Products:
 Wireless Mouse               5
 ```
 
-## Pipeline
-
-All functions live in [`src/data_cleaning.py`](src/data_cleaning.py). Each returns a new
-DataFrame and never modifies its input.
-
-```text
-load_orders → normalize_orders → fill_missing_categories ─┬→ calculate_category_revenue
-                                                          └→ get_top_selling_products
-```
-
-## Data cleaning approach
-
-### Normalizing products and categories (`normalize_orders`)
-
-The same rules apply to `product` and `category`, using vectorized pandas string methods:
-
-1. **Whitespace**: any run of spaces, tabs or newlines collapses to one space, and
-   leading/trailing whitespace is removed (`"  wireless   mouse "` → `"wireless mouse"`).
-2. **Casing**: values are title-cased (`"wireless mouse"` → `"Wireless Mouse"`,
-   `"electronics"` → `"Electronics"`).
-3. **Missing values**: empty or whitespace-only values become a true missing value
-   (`pd.NA`), never a placeholder string such as `"Unknown"` or `"None"`.
-
-### Filling missing categories (`fill_missing_categories`)
-
-1. Take the orders where both product and category are known.
-2. Count the distinct categories for each product.
-3. Build a product → category mapping from products with **exactly one** known category
-   (here: `Yoga Mat → Fitness`, `Wireless Mouse → Electronics`, `Desk Lamp → Home`).
-4. Fill only missing categories from that mapping. Existing categories are never overwritten.
-
-Result: O3 `Yoga Mat` gets `Fitness` from O5.
-
-| Situation | Result |
-|---|---|
-| Product has one known category | Missing category is filled |
-| Product has conflicting categories (e.g. `Fitness` and `Fashion`) | Left missing, not guessed |
-| Product has no known category | Left missing |
-| Product name is missing | Left missing |
-
-The mapping is learned from the data rather than hardcoded, so it works for any product,
-and it only fills a value when the data agrees on a single answer.
-
-### Preserving the original dataset
-
-`data/orders.json` is only read, never written. All cleaning happens on in-memory copies.
-
-## Revenue calculation
-
-For each order, `revenue = qty × unit_price`. Order revenues are summed per category with
-a pandas `groupby`, then sorted from highest to lowest (ties alphabetically).
-
 | Category | Calculation | Total revenue |
 |---|---|---:|
 | Fitness | O3 (5 × 15.00) + O5 (2 × 15.00) | 105.00 |
@@ -154,78 +113,64 @@ a pandas `groupby`, then sorted from highest to lowest (ties alphabetically).
 | Home | O4 (1 × 25.00) | 25.00 |
 | **Total** | | **230.00** |
 
-## Top 2 best-selling products
-
-Products are ranked by **total quantity sold**, not by revenue or number of orders. All
-orders for the same normalized product name are grouped and their `qty` values summed.
-
 | Rank | Product | Calculation | Quantity |
 |---:|---|---|---:|
 | 1 | Yoga Mat | O3 (5) + O5 (2) | 7 |
 | 2 | Wireless Mouse | O1 (3) + O2 (2) | 5 |
 
-Desk Lamp (1 unit) is third. Ties are broken alphabetically by product name. `top_n`
-defaults to 2 and must be a positive integer.
+### Cleaning approach
 
-## Assumptions and limitations
+All functions are in [`src/data_cleaning.py`](src/data_cleaning.py) and return new
+DataFrames without modifying their input:
 
-- **Normalize before aggregating.** Without it, `Wireless Mouse` and `wireless mouse`
-  would be counted as two different products.
-- **Only unambiguous categories are inferred.** A missing category is filled only when the
-  product has exactly one known category.
-- **Conflicts are not resolved automatically.** If a product appears under different
-  categories, its missing categories stay missing for manual review.
-- **Orders with a missing product name are excluded from the best-seller ranking**, since
-  they cannot be attributed to a product.
-- **Unresolved categories still count toward revenue.** They appear as an `<NA>` row so no
-  revenue is silently dropped.
-- **Title case is a simple rule.** It would turn names like `iPhone` into `Iphone`, which
-  is fine for this dataset but would need a brand-aware approach in production.
-- **Floating-point arithmetic.** Revenue uses floats, which is exact for this dataset's
-  prices. A production financial system should use integer cents or `decimal.Decimal`
-  to avoid rounding errors (e.g. `0.1 + 0.1 + 0.1 = 0.30000000000000004`).
+```text
+load_orders → normalize_orders → fill_missing_categories ─┬→ calculate_category_revenue
+                                                          └→ get_top_selling_products
+```
 
-## Part B1 — LLM Sentiment Evaluation
+The raw data has three problems:
 
-### Problem statement
+| Issue | Example |
+|---|---|
+| Inconsistent product casing | `Wireless Mouse` (O1) vs `wireless mouse` (O2) |
+| Inconsistent category casing | `electronics` (O1) vs `Electronics` (O2) |
+| Missing category | O3 `Yoga Mat` has category `""` |
 
-The assignment provides four customer reviews, each with a reference sentiment label and
-an LLM-generated prediction. The goal is to score the predictions against the references
-and discuss the ambiguous or borderline cases.
+**Normalization** (`normalize_orders`): product and category values are whitespace-collapsed,
+trimmed and title-cased (`"wireless mouse"` → `"Wireless Mouse"`). Empty values become a
+true missing value (`pd.NA`), never a placeholder like `"Unknown"`.
 
-### Evaluation dataset
+**Category inference** (`fill_missing_categories`): a product → category mapping is learned
+from orders where both are known, using only products with **exactly one** known category.
+Only missing categories are filled. O3 `Yoga Mat` gets `Fitness` from O5.
 
-The four reviews are stored exactly as given in [`data/reviews.json`](data/reviews.json).
+| Situation | Result |
+|---|---|
+| Product has one known category | Missing category is filled |
+| Product has conflicting categories | Left missing, not guessed |
+| Product has no known category | Left missing |
 
-| Review ID | Review | Reference | LLM prediction |
-|---|---|---|---|
-| R1 | "Works fine but the battery died in a week." | mixed | positive |
-| R2 | "Exactly what I needed, five stars!" | positive | positive |
-| R3 | "Arrived broken, waste of money." | negative | negative |
-| R4 | "It's okay, nothing special." | neutral | positive |
+**Revenue**: `qty × unit_price` per order, summed per category, highest first. Orders whose
+category cannot be resolved stay in the result as an `<NA>` row, so no revenue is dropped.
 
-The predictions are supplied by the assignment. No live LLM API is called.
+**Top sellers**: total `qty` per normalized product name, highest first, ties broken
+alphabetically. Orders with no product name are excluded. `top_n` must be a positive integer.
 
-### Evaluation methodology
+## Part B1 — LLM sentiment evaluation
 
-All logic is in [`src/sentiment_evaluation.py`](src/sentiment_evaluation.py):
+The four reviews and their LLM predictions are supplied by the assignment in
+[`data/reviews.json`](data/reviews.json). **No live LLM is called.**
 
-1. **Load** the reviews from JSON into a pandas DataFrame.
-2. **Compare** reference and predicted labels row by row, ignoring case and surrounding
-   whitespace. A missing label counts as incorrect.
-3. **Accuracy** = correct predictions / total predictions. Empty input raises an error.
-4. **Error analysis** returns only the misclassified reviews with their text and labels.
-5. **Per-class precision, recall and F1** (scikit-learn) for the four classes in a fixed
-   order: positive, negative, neutral, mixed. Labels outside these four raise an error
-   instead of being silently dropped.
-6. **Macro average** (each class weighted equally) and **weighted average** (each class
-   weighted by its number of examples).
-7. **Confusion matrix** with actual labels as rows and predicted labels as columns, always
-   including all four classes.
+| Review | Text | Reference | LLM prediction | Correct |
+|---|---|---|---|---|
+| R1 | "Works fine but the battery died in a week." | mixed | positive | No |
+| R2 | "Exactly what I needed, five stars!" | positive | positive | Yes |
+| R3 | "Arrived broken, waste of money." | negative | negative | Yes |
+| R4 | "It's okay, nothing special." | neutral | positive | No |
 
-### Evaluation results
+### Results
 
-**Accuracy: 50% (2 of 4 correct). Macro F1: 0.3750.**
+**4 reviews, 2 correct, 2 incorrect. Accuracy: 50%. Macro F1: 0.3750.**
 
 | Class | Precision | Recall | F1 | Support |
 |---|---:|---:|---:|---:|
@@ -236,10 +181,8 @@ All logic is in [`src/sentiment_evaluation.py`](src/sentiment_evaluation.py):
 | **macro avg** | 0.3333 | 0.5000 | 0.3750 | |
 | **weighted avg** | 0.3333 | 0.5000 | 0.3750 | |
 
-Macro F1 is the mean of the per-class F1 scores: (0.5 + 1.0 + 0 + 0) / 4 = 0.375. The
-weighted average equals the macro average because every class has exactly one example.
-
-Confusion matrix (rows = actual, columns = predicted):
+Macro F1 = (0.5 + 1.0 + 0 + 0) / 4 = 0.375. (Macro *precision* is 0.3333.) Precision for a
+class that is never predicted is 0 / 0 and is reported as 0 (`zero_division=0`).
 
 | Actual \ Predicted | positive | negative | neutral | mixed |
 |---|---:|---:|---:|---:|
@@ -248,56 +191,139 @@ Confusion matrix (rows = actual, columns = predicted):
 | **neutral** | 1 | 0 | 0 | 0 |
 | **mixed** | 1 | 0 | 0 | 0 |
 
-R2 and R3 are on the diagonal (correct). R4 (neutral) and R1 (mixed) were both predicted
-positive, and the neutral and mixed columns are empty.
-
 ### Error analysis
 
-**R1: "Works fine but the battery died in a week."**: reference *mixed*, predicted *positive*.
-The review contains both positive ("works fine") and negative ("battery died in a week")
-sentiment. The prediction reflects the positive phrase and misses the complaint. The battery
-failure makes the review *mixed*, or even *negative* under some annotation guidelines.
+- **R1** (*mixed* → *positive*): the review has a positive part ("works fine") and a
+  negative part ("battery died in a week"). The prediction misses the complaint. Under some
+  annotation guidelines it could even be *negative*.
+- **R4** (*neutral* → *positive*): "okay" is not necessarily positive, and "nothing special"
+  points to an average experience. The line between *neutral* and *mildly positive* is
+  subjective.
 
-**R4: "It's okay, nothing special."**: reference *neutral*, predicted *positive*.
-"Okay" does not necessarily mean positive, and "nothing special" suggests an average or
-underwhelming experience. The line between *neutral* and *mildly positive* is subjective.
+The two clear-cut reviews (R2, R3) were classified correctly. Both errors are borderline
+reviews predicted as *positive*, and the model never predicted *mixed* or *neutral*. Four
+reviews are not enough to conclude that the model is biased in general. Full discussion:
+[`docs/sentiment_error_analysis.md`](docs/sentiment_error_analysis.md).
 
-The two clear-cut reviews (R2 positive, R3 negative) were classified correctly. A fuller
-discussion is in [`docs/sentiment_error_analysis.md`](docs/sentiment_error_analysis.md).
+The code is in [`src/sentiment_evaluation.py`](src/sentiment_evaluation.py). Labels are
+compared ignoring case and whitespace, and labels outside the four classes raise an error
+in the metrics instead of being silently dropped.
 
-### Evaluation limitations
+## Part B2 — Knowledge graph
 
-- **Only four reviews.** Each review moves accuracy by 25 percentage points, and every
-  per-class score can only be 0, 0.5 or 1.
-- **Too small for reliable estimates.** These results describe these four reviews, not how
-  the model would perform on new data. They are not enough to conclude that the model is
-  generally biased in any direction.
-- **Sentiment labels are subjective.** The reference labels for R1 and R4 are reasonable
-  but debatable, so the references are not automatically correct.
-- **The model never predicts `mixed` or `neutral`** in this sample, so those classes
-  have zero recall.
-- **Undefined metrics.** Precision for a class that is never predicted is 0 / 0. It is
-  reported as 0 using `zero_division=0`.
-- **For production evaluation**, a larger, representative labelled dataset covering all
-  four classes is needed, with clear annotation guidelines (e.g. when a complaint turns
-  *mixed* into *negative*) and ideally several annotators per review.
+> **Synthetic data.** The assignment data has no customers and nothing linking orders and
+> reviews to customers or products. The customer IDs (`C1`–`C3`), the order → customer
+> assignments and the review → customer/product links in
+> [`data/graph_demo.json`](data/graph_demo.json) were **invented to demonstrate the query**.
+> They are not facts from the assignment. Orders, products, categories and reviews are the
+> original data.
 
-### Running Part B1
+### Schema
 
-From the repository root:
+| Node type | Attributes | Nodes in the demo graph |
+|---|---|---|
+| Customer | `customer_id` | C1, C2, C3 (synthetic) |
+| Product | `product_id`, `product_name` | P1 Wireless Mouse, P2 Yoga Mat, P3 Desk Lamp |
+| Category | `category_id`, `category_name` | CAT1 Electronics, CAT2 Fitness, CAT3 Home |
+| Review | `review_id`, `review_text`, `reference_label`, `predicted_label` | R1–R4 |
 
-```bash
-python -m src.sentiment_evaluation
+| Relationship | Direction | Built from |
+|---|---|---|
+| `purchased` | Customer → Product | Synthetic order → customer mapping + cleaned orders |
+| `belongsTo` | Product → Category | Cleaned orders (only when a product has one category) |
+| `wrote` | Customer → Review | Synthetic mapping |
+| `about` | Review → Product | Synthetic mapping |
+
+### Implementation
+
+[`src/knowledge_graph.py`](src/knowledge_graph.py):
+
+- `build_knowledge_graph(orders_df, reviews_df, graph_data)` builds an `nx.DiGraph` from the
+  Part A cleaned orders, the Part B1 reviews and the synthetic mapping. Node keys are
+  prefixed by type (`customer:C1`, `product:P1`) so different entity types never collide.
+  Repeat purchases of a product by one customer become one `purchased` edge. References to
+  unknown orders, reviews or products, or blank customer IDs, raise a `ValueError`.
+- `find_products_purchased_by_negative_reviewers(graph)`:
+  1. finds Review nodes with `reference_label == "negative"` (the ground truth, not the LLM
+     prediction);
+  2. follows incoming `wrote` edges to their Customer authors;
+  3. follows those customers' outgoing `purchased` edges to Product nodes;
+  4. returns the distinct product names, sorted.
+
+  It returns **all** products those customers bought, not just the reviewed product.
+
+### Output
+
+```text
+Knowledge Graph Summary
+-----------------------
+Total Nodes: 13
+Total Edges: 15
+
+Node Types:
+Customer: 3
+Product: 3
+Category: 3
+Review: 4
+
+Relationship Types:
+purchased: 4
+belongsTo: 3
+wrote: 4
+about: 4
+
+Products Purchased by Customers with Negative Reviews:
+- Desk Lamp
+- Yoga Mat
 ```
 
-This prints the per-review results, accuracy, misclassified reviews, per-class and averaged
-metrics, and the confusion matrix.
+Only R3 ("Arrived broken, waste of money.") is negative, and in the synthetic mapping it was
+written by C1. C1 bought Yoga Mat (O3, O5) and Desk Lamp (O4), so both are returned, even
+though C1's own review of Yoga Mat (R2) is positive. Wireless Mouse is not returned because
+its buyers (C2, C3) wrote only mixed and neutral reviews. Design details:
+[`docs/knowledge_graph_design.md`](docs/knowledge_graph_design.md).
 
-## Remaining work
+### Optional Cypher query
 
-**Part B2: Knowledge graph modeling** (not yet implemented):
+[`queries/negative_review_customers.cypher`](queries/negative_review_customers.cypher)
+contains the equivalent Neo4j query:
 
-- Model `Customer`, `Product`, `Category` and `Review` entities and their relationships
-  (e.g. `Customer —purchased→ Product —belongsTo→ Category`).
-- Implement graph traversal and querying.
-- Find all products purchased by customers who left at least one negative review.
+```cypher
+MATCH (c:Customer)-[:wrote]->(r:Review)
+WHERE r.reference_label = 'negative'
+MATCH (c)-[:purchased]->(p:Product)
+RETURN DISTINCT p.product_name AS product
+ORDER BY product;
+```
+
+It is documented for comparison but **has not been executed against a Neo4j instance**. It
+assumes the graph was loaded into Neo4j with the same labels, relationship types and
+property names. Explanation: [`docs/cypher_query_explanation.md`](docs/cypher_query_explanation.md).
+
+## Assumptions and limitations
+
+- **Category inference relies on consistent product-category mappings.** A missing category
+  is filled only when the product has exactly one known category. Conflicts are left
+  missing for manual review.
+- **Title case is a simple rule.** It would turn `iPhone` into `Iphone`, which is fine for
+  this dataset but not for brand names in general.
+- **Revenue uses floats.** Exact for these prices, but production code should use integer
+  cents or `decimal.Decimal`.
+- **Only four sentiment examples are available.** Each review moves accuracy by 25
+  percentage points, so the metrics describe these reviews, not general model performance.
+- **Sentiment labels are subjective.** The references for R1 and R4 are reasonable but
+  debatable.
+- **The original dataset lacks customer identifiers.** Synthetic relationships are necessary
+  to demonstrate the graph query, and the query result depends on them.
+- **The graph is an in-memory demonstration**, rebuilt on every run, not a production graph
+  database. A `DiGraph` keeps one edge per customer–product pair, so per-order details
+  (e.g. C1's two Yoga Mat orders) are not stored on the graph.
+
+## Future improvements
+
+Not implemented. Possible next steps:
+
+- A larger, representative labelled dataset for the sentiment evaluation.
+- Automated regression checks for the three parts.
+- Loading the graph into a graph database such as Neo4j and running the Cypher query there.
+- More robust input validation (e.g. missing or non-numeric quantities and prices).
