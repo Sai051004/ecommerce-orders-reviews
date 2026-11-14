@@ -147,16 +147,30 @@ whitespace, while the Cypher `WHERE` is an exact match. The labels in this datas
 already lowercase, so the results are the same. A case-insensitive Cypher version would be
 `WHERE toLower(trim(r.reference_label)) = 'negative'`.
 
-## Execution limitations
+## Verification on Neo4j
 
-1. The Cypher query is provided as an **equivalent graph database query** for the
-   assignment requirement.
-2. The project executes its graph operations with **NetworkX**. No Neo4j database, driver
-   or connection is part of the project.
-3. The Cypher query **has not been executed against a Neo4j instance**.
-4. It assumes the graph has been loaded into Neo4j with the same node labels (`Customer`,
+The query was run, unchanged, on a local **Neo4j 5.26.0 Community** server. The graph built
+by `build_knowledge_graph()` was loaded with each node's `node_type` as its label, each edge's
+`relationship` as its relationship type, and all other attributes as properties.
+
+| Graph | Cypher result | NetworkX result | Match |
+|---|---|---|---|
+| Assignment demo data (13 nodes, 15 edges) | Desk Lamp, Yoga Mat | Desk Lamp, Yoga Mat | ✅ |
+| One negative review, two purchases | both products | both products | ✅ |
+| Several negative reviews by one customer | product once | product once | ✅ |
+| Two negative reviewers share a product | product once | product once | ✅ |
+| Customer with only a positive review | excluded | excluded | ✅ |
+| No negative reviews (mixed only) | empty | empty | ✅ |
+| Predicted negative, reference positive | empty | empty | ✅ |
+| Negative reviewer with no purchases | empty | empty | ✅ |
+| `wrote` edge in the reverse direction | empty | empty | ✅ |
+
+## Limitations
+
+1. The project executes its graph operations with **NetworkX**. Neo4j was used once for the
+   check above. No Neo4j database, driver or connection is part of the project.
+2. The query assumes the graph is loaded into Neo4j with the same node labels (`Customer`,
    `Review`, `Product`), relationship types (`wrote`, `purchased`) and property names
    (`reference_label`, `product_name`) as the NetworkX graph.
-5. Under that schema, the NetworkX and Cypher queries are **logically equivalent**, but the
-   Cypher result has only been reasoned through by hand against the demo data, not verified
-   by running it on a database.
+3. The `WHERE` clause matches the label exactly, while the Python function ignores case and
+   whitespace (see above).
