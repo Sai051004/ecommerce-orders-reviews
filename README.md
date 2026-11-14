@@ -15,8 +15,6 @@ The project implements three components:
    `Customer —purchased→ Product —belongsTo→ Category` graph and finds all products
    purchased by customers who left at least one negative review.
 
-A final verification report is in [`docs/final_verification.md`](docs/final_verification.md).
-
 ## Tech stack
 
 - **Python 3.11**
@@ -38,8 +36,7 @@ ecommerce-orders-reviews/
 ├── docs/
 │   ├── sentiment_error_analysis.md  # Part B1: misclassified and borderline reviews
 │   ├── knowledge_graph_design.md    # Part B2: graph schema, demo data, modeling decisions
-│   ├── cypher_query_explanation.md  # Part B2: equivalent Cypher query, clause by clause
-│   └── final_verification.md        # Requirement checklist and verified results
+│   └── cypher_query_explanation.md  # Part B2: equivalent Cypher query, clause by clause
 ├── queries/
 │   └── negative_review_customers.cypher  # Part B2: equivalent Neo4j Cypher query
 ├── src/
@@ -137,8 +134,10 @@ The raw data has three problems:
 | Missing category | O3 `Yoga Mat` has category `""` |
 
 **Normalization** (`normalize_orders`): product and category values are whitespace-collapsed,
-trimmed and title-cased (`"wireless mouse"` → `"Wireless Mouse"`). Empty values become a
-true missing value (`pd.NA`), never a placeholder like `"Unknown"`.
+trimmed, lower-cased and then the first letter of each word is capitalized
+(`"wireless mouse"` → `"Wireless Mouse"`, `"men's shoes"` → `"Men's Shoes"`). Empty values
+become a true missing value (`pd.NA`), never a placeholder like `"Unknown"`. A duplicated
+`order_id` raises an error, since it would be counted twice.
 
 **Category inference** (`fill_missing_categories`): a product → category mapping is learned
 from orders where both are known, using only products with **exactly one** known category.
@@ -152,9 +151,12 @@ Only missing categories are filled. O3 `Yoga Mat` gets `Fitness` from O5.
 
 **Revenue**: `qty × unit_price` per order, summed per category, highest first. Orders whose
 category cannot be resolved stay in the result as an `<NA>` row, so no revenue is dropped.
+A missing, non-numeric or negative `qty` or `unit_price` raises an error naming the order,
+instead of being silently treated as 0. Numeric strings such as `"3"` are converted.
 
 **Top sellers**: total `qty` per normalized product name, highest first, ties broken
-alphabetically. Orders with no product name are excluded. `top_n` must be a positive integer.
+alphabetically. Orders with no product name are excluded. `qty` is validated the same way as
+for revenue, and `top_n` must be a positive integer.
 
 ## Part B1 — LLM sentiment evaluation
 
@@ -206,8 +208,8 @@ reviews are not enough to conclude that the model is biased in general. Full dis
 [`docs/sentiment_error_analysis.md`](docs/sentiment_error_analysis.md).
 
 The code is in [`src/sentiment_evaluation.py`](src/sentiment_evaluation.py). Labels are
-compared ignoring case and whitespace, and labels outside the four classes raise an error
-in the metrics instead of being silently dropped.
+compared ignoring case and whitespace. A missing label, or a label outside the four classes,
+raises an error in both the accuracy and the metrics instead of being silently miscounted.
 
 ## Part B2 — Knowledge graph
 
@@ -242,7 +244,8 @@ in the metrics instead of being silently dropped.
   Part A cleaned orders, the Part B1 reviews and the synthetic mapping. Node keys are
   prefixed by type (`customer:C1`, `product:P1`) so different entity types never collide.
   Repeat purchases of a product by one customer become one `purchased` edge. References to
-  unknown orders, reviews or products, or blank customer IDs, raise a `ValueError`.
+  unknown orders, reviews or products, blank customer IDs, or an order or review listed
+  twice in the mapping raise a `ValueError`.
 - `find_products_purchased_by_negative_reviewers(graph)`:
   1. finds Review nodes with `reference_label == "negative"` (the ground truth, not the LLM
      prediction);
@@ -305,8 +308,8 @@ property names. Explanation: [`docs/cypher_query_explanation.md`](docs/cypher_qu
 - **Category inference relies on consistent product-category mappings.** A missing category
   is filled only when the product has exactly one known category. Conflicts are left
   missing for manual review.
-- **Title case is a simple rule.** It would turn `iPhone` into `Iphone`, which is fine for
-  this dataset but not for brand names in general.
+- **Capitalization is a simple rule.** It would turn `iPhone` into `Iphone` and `Wi-Fi` into
+  `Wi-fi`, which is fine for this dataset but not for brand names in general.
 - **Revenue uses floats.** Exact for these prices, but production code should use integer
   cents or `decimal.Decimal`.
 - **Only four sentiment examples are available.** Each review moves accuracy by 25
@@ -326,4 +329,4 @@ Not implemented. Possible next steps:
 - A larger, representative labelled dataset for the sentiment evaluation.
 - Automated regression checks for the three parts.
 - Loading the graph into a graph database such as Neo4j and running the Cypher query there.
-- More robust input validation (e.g. missing or non-numeric quantities and prices).
+- Fuzzy matching of near-duplicate product names (e.g. `Wireless-Mouse` vs `Wireless Mouse`).
