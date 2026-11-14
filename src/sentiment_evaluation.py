@@ -34,12 +34,14 @@ def is_correct(df: pd.DataFrame) -> pd.Series:
 
 
 def calculate_accuracy(df: pd.DataFrame) -> float:
-    """Fraction of reviews whose predicted label matches the reference (0 to 1)."""
-    if df.empty:
-        raise ValueError("Cannot calculate accuracy: the dataset has no reviews")
+    """Fraction of reviews whose predicted label matches the reference (0 to 1).
 
-    correct = is_correct(df)
-    return float(correct.sum() / len(df))
+    Uses the same validation as the other metrics: empty input, or a missing or
+    unsupported label, raises ValueError.
+    """
+    reference, predicted = _validated_labels(df)
+    correct = sum(ref == pred for ref, pred in zip(reference, predicted))
+    return correct / len(reference)
 
 
 def analyze_errors(df: pd.DataFrame) -> pd.DataFrame:
@@ -62,7 +64,7 @@ def _validated_labels(df: pd.DataFrame) -> tuple[list[str], list[str]]:
     so no review is silently left out of the metrics.
     """
     if df.empty:
-        raise ValueError("Cannot calculate metrics: the dataset has no reviews")
+        raise ValueError("Cannot evaluate: the dataset has no reviews")
     missing_columns = [col for col in LABEL_COLUMNS if col not in df.columns]
     if missing_columns:
         raise ValueError(f"Missing required columns: {missing_columns}")
