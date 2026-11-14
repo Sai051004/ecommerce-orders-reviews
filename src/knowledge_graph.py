@@ -162,3 +162,37 @@ def build_knowledge_graph(
         )
 
     return graph
+
+
+def summarize_graph(graph: nx.DiGraph) -> dict:
+    """Count nodes per node_type and edges per relationship."""
+    node_counts = Counter(attrs["node_type"] for _, attrs in graph.nodes(data=True))
+    edge_counts = Counter(attrs["relationship"] for _, _, attrs in graph.edges(data=True))
+    return {
+        "total_nodes": graph.number_of_nodes(),
+        "total_edges": graph.number_of_edges(),
+        "node_types": {t: node_counts.get(t, 0) for t in NODE_TYPES},
+        "relationships": {r: edge_counts.get(r, 0) for r in RELATIONSHIPS},
+    }
+
+
+if __name__ == "__main__":
+    data_dir = Path(__file__).resolve().parent.parent / "data"
+
+    orders = fill_missing_categories(normalize_orders(load_orders(str(data_dir / "orders.json"))))
+    reviews = load_reviews(str(data_dir / "reviews.json"))
+    graph_data = load_graph_data(str(data_dir / "graph_demo.json"))
+
+    knowledge_graph = build_knowledge_graph(orders, reviews, graph_data)
+    summary = summarize_graph(knowledge_graph)
+
+    print("Knowledge Graph Summary")
+    print("-----------------------")
+    print(f"Total Nodes: {summary['total_nodes']}")
+    print(f"Total Edges: {summary['total_edges']}")
+    print("\nNode Types:")
+    for node_type, count in summary["node_types"].items():
+        print(f"{node_type}: {count}")
+    print("\nRelationship Types:")
+    for relationship, count in summary["relationships"].items():
+        print(f"{relationship}: {count}")
