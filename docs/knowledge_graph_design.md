@@ -5,7 +5,7 @@
 > products purchased by customers who left at least one negative review.
 
 This note defines the graph schema and the small demonstration dataset it is built from.
-The graph itself and the query are implemented in a later step.
+The graph and the query are implemented in [`src/knowledge_graph.py`](../src/knowledge_graph.py).
 
 ## Data sources
 
@@ -200,7 +200,7 @@ predicted negative), but the query is defined on `reference_label`.
    node is kept but gets **no** `belongsTo` edge. No placeholder category such as
    `"Unknown"` is created. In this dataset every product has a category, since O3's
    missing category is filled from O5.
-9. **Typed nodes even if IDs overlap.** Each node carries a `type` (Customer, Product,
-   Category, Review), and node keys include the type (e.g. `("Product", "P1")`). That way
+9. **Typed nodes even if IDs overlap.** Each node carries a `node_type` (Customer, Product,
+   Category, Review), and node keys are prefixed with the type (e.g. `product:P1`). That way
    two entities that happen to share an ID string never merge into one node, and queries
    can filter by type (e.g. "Review nodes with a negative label").
