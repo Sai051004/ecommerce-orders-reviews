@@ -49,8 +49,9 @@ ecommerce-orders-reviews/
 
 ## Installation and setup
 
-Requires Python 3, pandas, and scikit-learn (developed with Python 3.11, pandas 3.1 and
-scikit-learn 1.9). scikit-learn is only used by the Part B1 metrics.
+Requires Python 3, pandas, scikit-learn and NetworkX (developed with Python 3.11, pandas 3.1,
+scikit-learn 1.9 and NetworkX 3.6). scikit-learn is only used by the Part B1 metrics, and
+NetworkX only by the Part B2 knowledge graph.
 
 ```bash
 git clone https://github.com/Sai051004/ecommerce-orders-reviews.git
@@ -60,7 +61,7 @@ python -m venv .venv
 .venv\Scripts\activate          # Windows
 source .venv/bin/activate       # macOS / Linux
 
-pip install pandas scikit-learn
+pip install pandas scikit-learn networkx
 ```
 
 ## Running Part A
