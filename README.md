@@ -10,7 +10,10 @@ Coding assignment for the Duck Creek Technologies Associate Software Engineer (A
 - Calculates total revenue by category.
 - Identifies the top 2 best-selling products by quantity.
 
-**Part B** (LLM evaluation and knowledge graph) is not yet implemented. See [Future work](#future-work).
+**Part B1** scores LLM-generated sentiment labels against reference labels. See
+[Part B1: Sentiment evaluation](#part-b1-sentiment-evaluation).
+
+**Part B2** (knowledge graph) is not yet implemented. See [Future work](#future-work).
 
 ## Problem statement
 
@@ -32,10 +35,12 @@ The raw data in [`data/orders.json`](data/orders.json) has three problems:
 ```text
 ecommerce-orders-reviews/
 ├── data/
-│   └── orders.json        # raw input: the five original orders, never modified
+│   ├── orders.json              # Part A raw input: the five original orders, never modified
+│   └── reviews.json             # Part B1 input: four reviews with reference and LLM labels
 ├── src/
 │   ├── __init__.py
-│   └── data_cleaning.py   # Part A pipeline: load, clean, revenue, top sellers
+│   ├── data_cleaning.py         # Part A pipeline: load, clean, revenue, top sellers
+│   └── sentiment_evaluation.py  # Part B1: sentiment label accuracy
 ├── .gitignore
 └── README.md
 ```
@@ -176,12 +181,40 @@ defaults to 2 and must be a positive integer.
   prices. A production financial system should use integer cents or `decimal.Decimal`
   to avoid rounding errors (e.g. `0.1 + 0.1 + 0.1 = 0.30000000000000004`).
 
+## Part B1: Sentiment evaluation
+
+The LLM predictions are given in the assignment and stored in
+[`data/reviews.json`](data/reviews.json). No LLM is called. From the repository root:
+
+```bash
+python -m src.sentiment_evaluation
+```
+
+Output:
+
+```text
+Per-review results:
+review_id reference_label predicted_label  correct
+       R1           mixed        positive    False
+       R2        positive        positive     True
+       R3        negative        negative     True
+       R4         neutral        positive    False
+
+Total Reviews: 4
+Correct Predictions: 2
+Incorrect Predictions: 2
+Accuracy: 50.00%
+```
+
+**Accuracy = correct predictions / total predictions = 2 / 4 = 50%.** Labels are compared
+ignoring case and surrounding whitespace. A missing label counts as incorrect, and an empty
+dataset raises an error instead of returning a misleading score.
+
 ## Future work
 
-Remaining assignment requirements (Part B):
+Remaining assignment requirements:
 
-- **B1**: Evaluate LLM-generated sentiment labels against reference labels, score
-  accuracy, and discuss ambiguous cases.
+- **B1**: Discuss the ambiguous and borderline sentiment cases.
 - **B2**: Model `Customer —purchased→ Product —belongsTo→ Category` as a knowledge graph.
 - **B2**: Write a graph query that finds all products purchased by customers who left at
   least one negative review.
