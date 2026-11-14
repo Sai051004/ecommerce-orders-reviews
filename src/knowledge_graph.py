@@ -176,6 +176,53 @@ def summarize_graph(graph: nx.DiGraph) -> dict:
     }
 
 
+def _has_relationship(graph: nx.DiGraph, source: str, target: str, relationship: str) -> bool:
+    """True if the edge source -> target exists and has the given relationship."""
+    edge = graph.get_edge_data(source, target)
+    return edge is not None and edge.get("relationship") == relationship
+
+
+def _is_node_type(graph: nx.DiGraph, node: str, node_type: str) -> bool:
+    return graph.nodes[node].get("node_type") == node_type
+
+
+def find_products_purchased_by_negative_reviewers(graph: nx.DiGraph) -> list[str]:
+    """Names of all products bought by customers who wrote at least one negative review.
+
+    A review is negative when its reference (ground-truth) label is "negative"; the LLM's
+    predicted label is ignored. Every product a qualifying customer purchased is returned,
+    not only the one they reviewed. Results are distinct and sorted alphabetically.
+    The graph is only read, never modified.
+    """
+    # Step A: Review nodes whose reference label is negative.
+    negative_reviews = [
+        node
+        for node, attrs in graph.nodes(data=True)
+        if attrs.get("node_type") == "Review"
+        and str(attrs.get("reference_label", "")).strip().lower() == "negative"
+    ]
+
+    # Step B: Customers with an incoming "wrote" edge to one of those reviews.
+    negative_reviewers = set()
+    for review in negative_reviews:
+        for author in graph.predecessors(review):
+            if _is_node_type(graph, author, "Customer") and _has_relationship(
+                graph, author, review, "wrote"
+            ):
+                negative_reviewers.add(author)
+
+    # Steps C and D: every product those customers purchased, collected in a set.
+    product_names = set()
+    for customer in negative_reviewers:
+        for product in graph.successors(customer):
+            if _is_node_type(graph, product, "Product") and _has_relationship(
+                graph, customer, product, "purchased"
+            ):
+                product_names.add(graph.nodes[product]["product_name"])
+
+    return sorted(product_names)
+
+
 if __name__ == "__main__":
     data_dir = Path(__file__).resolve().parent.parent / "data"
 
