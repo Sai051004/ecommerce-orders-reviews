@@ -299,9 +299,11 @@ RETURN DISTINCT p.product_name AS product
 ORDER BY product;
 ```
 
-It is documented for comparison but **has not been executed against a Neo4j instance**. It
-assumes the graph was loaded into Neo4j with the same labels, relationship types and
-property names. Explanation: [`docs/cypher_query_explanation.md`](docs/cypher_query_explanation.md).
+The query was run once on a local Neo4j 5.26 Community server, with the demo graph loaded
+using the same labels, relationship types and property names. It returned **Desk Lamp, Yoga
+Mat**, the same as the NetworkX query, and also matched it on 8 small edge-case graphs.
+Neo4j is not a dependency of the project: the code runs on NetworkX only. Explanation:
+[`docs/cypher_query_explanation.md`](docs/cypher_query_explanation.md).
 
 ## Assumptions and limitations
 
