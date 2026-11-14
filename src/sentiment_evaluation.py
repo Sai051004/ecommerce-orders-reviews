@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 import pandas as pd
-from sklearn.metrics import precision_recall_fscore_support
+from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
 
 LABEL_COLUMNS = ["reference_label", "predicted_label"]
 ERROR_COLUMNS = ["review_id", "review_text", *LABEL_COLUMNS]
@@ -119,6 +119,17 @@ def calculate_classification_metrics(df: pd.DataFrame) -> dict:
         "macro": averages["macro"],
         "weighted": averages["weighted"],
     }
+
+
+def generate_confusion_matrix(df: pd.DataFrame) -> pd.DataFrame:
+    """Counts of reference (rows) vs predicted (columns) labels, in SENTIMENT_LABELS order."""
+    reference, predicted = _validated_labels(df)
+    matrix = confusion_matrix(reference, predicted, labels=SENTIMENT_LABELS)
+    return pd.DataFrame(
+        matrix,
+        index=pd.Index(SENTIMENT_LABELS, name="actual"),
+        columns=pd.Index(SENTIMENT_LABELS, name="predicted"),
+    )
 
 
 if __name__ == "__main__":
