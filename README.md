@@ -42,14 +42,15 @@ ecommerce-orders-reviews/
 ├── src/
 │   ├── __init__.py
 │   ├── data_cleaning.py         # Part A pipeline: load, clean, revenue, top sellers
-│   └── sentiment_evaluation.py  # Part B1: sentiment accuracy and error analysis
+│   └── sentiment_evaluation.py  # Part B1: accuracy, error analysis, precision/recall/F1, confusion matrix
 ├── .gitignore
 └── README.md
 ```
 
 ## Installation and setup
 
-Requires Python 3 and pandas (developed with Python 3.11 and pandas 3.1).
+Requires Python 3, pandas, and scikit-learn (developed with Python 3.11, pandas 3.1 and
+scikit-learn 1.9). scikit-learn is only used by the Part B1 metrics.
 
 ```bash
 git clone https://github.com/Sai051004/ecommerce-orders-reviews.git
@@ -59,7 +60,7 @@ python -m venv .venv
 .venv\Scripts\activate          # Windows
 source .venv/bin/activate       # macOS / Linux
 
-pip install pandas
+pip install pandas scikit-learn
 ```
 
 ## Running Part A
@@ -211,11 +212,40 @@ Misclassified Reviews:
 review_id                                review_text reference_label predicted_label
        R1 Works fine but the battery died in a week.           mixed        positive
        R4                It's okay, nothing special.         neutral        positive
+
+Per-Class Metrics:
+          precision  recall     f1  support
+positive     0.3333  1.0000 0.5000        1
+negative     1.0000  1.0000 1.0000        1
+neutral      0.0000  0.0000 0.0000        1
+mixed        0.0000  0.0000 0.0000        1
+
+Averaged Metrics:
+          precision  recall     f1
+macro        0.3333  0.5000 0.3750
+weighted     0.3333  0.5000 0.3750
+
+Accuracy: 0.5000
+
+Confusion Matrix (rows = actual, columns = predicted):
+predicted  positive  negative  neutral  mixed
+actual                                       
+positive          1         0        0      0
+negative          0         1        0      0
+neutral           1         0        0      0
+mixed             1         0        0      0
 ```
 
 **Accuracy = correct predictions / total predictions = 2 / 4 = 50%.** Labels are compared
 ignoring case and surrounding whitespace. A missing label counts as incorrect, and an empty
 dataset raises an error instead of returning a misleading score.
+
+**Per-class metrics** (scikit-learn) are computed for the four classes in a fixed order:
+positive, negative, neutral, mixed. Any label outside these four, or a missing label,
+raises an error instead of being silently dropped. The model never predicts `neutral` or
+`mixed`, so their precision is undefined (0 / 0). It is reported as 0 (`zero_division=0`),
+and their recall is 0 because their only example was missed. The confusion matrix shows both
+errors land in the `positive` column, which holds 3 of the 4 predictions.
 
 Both errors are borderline reviews (mixed and neutral) that the LLM labelled positive. The
 discussion of each case and the limits of this evaluation are in
