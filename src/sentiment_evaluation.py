@@ -1,6 +1,7 @@
 """Evaluate LLM-generated sentiment labels against reference labels."""
 
 import json
+from pathlib import Path
 
 import pandas as pd
 
@@ -37,3 +38,21 @@ def calculate_accuracy(df: pd.DataFrame) -> float:
     correct = is_correct(df)
     return float(correct.sum() / len(df))
 
+
+if __name__ == "__main__":
+    reviews_path = Path(__file__).resolve().parent.parent / "data" / "reviews.json"
+    reviews = load_reviews(str(reviews_path))
+
+    correct = is_correct(reviews)
+    accuracy = calculate_accuracy(reviews)
+
+    results = reviews[["review_id", "reference_label", "predicted_label"]].assign(
+        correct=correct
+    )
+    print("Per-review results:")
+    print(results.to_string(index=False))
+
+    print(f"\nTotal Reviews: {len(reviews)}")
+    print(f"Correct Predictions: {correct.sum()}")
+    print(f"Incorrect Predictions: {(~correct).sum()}")
+    print(f"Accuracy: {accuracy:.2%}")
