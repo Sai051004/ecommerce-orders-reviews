@@ -153,3 +153,17 @@ if __name__ == "__main__":
     errors = analyze_errors(reviews)
     print("\nMisclassified Reviews:")
     print(errors.to_string(index=False))
+
+    metrics = calculate_classification_metrics(reviews)
+    per_class = pd.DataFrame(metrics["per_class"]).T
+    per_class["support"] = per_class["support"].astype(int)
+    averages = pd.DataFrame({"macro": metrics["macro"], "weighted": metrics["weighted"]}).T
+
+    print("\nPer-Class Metrics:")
+    print(per_class.to_string(float_format="{:.4f}".format))
+    print("\nAveraged Metrics:")
+    print(averages.to_string(float_format="{:.4f}".format))
+    print(f"\nAccuracy: {metrics['accuracy']:.4f}")
+
+    print("\nConfusion Matrix (rows = actual, columns = predicted):")
+    print(generate_confusion_matrix(reviews).to_string())
