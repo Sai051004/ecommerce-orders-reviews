@@ -1,8 +1,7 @@
 """Build a Customer / Product / Category / Review knowledge graph with NetworkX.
 
-The schema is described in docs/knowledge_graph_design.md. Orders and reviews come
-from the assignment data. Customers and their links to orders and reviews come from
-the synthetic demo mapping in data/graph_demo.json.
+Orders and reviews come from the assignment data. Customers and their links to
+orders and reviews come from the synthetic demo mapping in data/graph_demo.json.
 """
 
 import json

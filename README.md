@@ -33,10 +33,6 @@ ecommerce-orders-reviews/
 │   ├── orders.json                  # Part A input: the five original orders (unmodified)
 │   ├── reviews.json                 # Part B1 input: the four original reviews (unmodified)
 │   └── graph_demo.json              # Part B2: SYNTHETIC customer / review links for the demo
-├── docs/
-│   ├── sentiment_error_analysis.md  # Part B1: misclassified and borderline reviews
-│   ├── knowledge_graph_design.md    # Part B2: graph schema, demo data, modeling decisions
-│   └── cypher_query_explanation.md  # Part B2: equivalent Cypher query, clause by clause
 ├── queries/
 │   └── negative_review_customers.cypher  # Part B2: equivalent Neo4j Cypher query
 ├── src/
@@ -204,8 +200,7 @@ class that is never predicted is 0 / 0 and is reported as 0 (`zero_division=0`).
 
 The two clear-cut reviews (R2, R3) were classified correctly. Both errors are borderline
 reviews predicted as *positive*, and the model never predicted *mixed* or *neutral*. Four
-reviews are not enough to conclude that the model is biased in general. Full discussion:
-[`docs/sentiment_error_analysis.md`](docs/sentiment_error_analysis.md).
+reviews are not enough to conclude that the model is biased in general.
 
 The code is in [`src/sentiment_evaluation.py`](src/sentiment_evaluation.py). Labels are
 compared ignoring case and whitespace. A missing label, or a label outside the four classes,
@@ -283,8 +278,7 @@ Products Purchased by Customers with Negative Reviews:
 Only R3 ("Arrived broken, waste of money.") is negative, and in the synthetic mapping it was
 written by C1. C1 bought Yoga Mat (O3, O5) and Desk Lamp (O4), so both are returned, even
 though C1's own review of Yoga Mat (R2) is positive. Wireless Mouse is not returned because
-its buyers (C2, C3) wrote only mixed and neutral reviews. Design details:
-[`docs/knowledge_graph_design.md`](docs/knowledge_graph_design.md).
+its buyers (C2, C3) wrote only mixed and neutral reviews.
 
 ### Optional Cypher query
 
@@ -299,11 +293,27 @@ RETURN DISTINCT p.product_name AS product
 ORDER BY product;
 ```
 
-The query was run once on a local Neo4j 5.26 Community server, with the demo graph loaded
-using the same labels, relationship types and property names. It returned **Desk Lamp, Yoga
-Mat**, the same as the NetworkX query, and also matched it on 8 small edge-case graphs.
-Neo4j is not a dependency of the project: the code runs on NetworkX only. Explanation:
-[`docs/cypher_query_explanation.md`](docs/cypher_query_explanation.md).
+The query was run, unchanged, on a local **Neo4j 5.26.0 Community** server. The graph built
+by `build_knowledge_graph()` was loaded with each node's `node_type` as its label, each
+edge's `relationship` as its relationship type, and all other attributes as properties.
+Cypher and NetworkX returned the same result in every case:
+
+| Graph | Cypher result | NetworkX result | Match |
+|---|---|---|---|
+| Assignment demo data (13 nodes, 15 edges) | Desk Lamp, Yoga Mat | Desk Lamp, Yoga Mat | ✅ |
+| One negative review, two purchases | both products | both products | ✅ |
+| Several negative reviews by one customer | product once | product once | ✅ |
+| Two negative reviewers share a product | product once | product once | ✅ |
+| Customer with only a positive review | excluded | excluded | ✅ |
+| No negative reviews (mixed only) | empty | empty | ✅ |
+| Predicted negative, reference positive | empty | empty | ✅ |
+| Negative reviewer with no purchases | empty | empty | ✅ |
+| `wrote` edge in the reverse direction | empty | empty | ✅ |
+
+Neo4j was only used for this check and is not a dependency of the project: the code runs on
+NetworkX only. The Cypher `WHERE` matches the label exactly, while the Python function also
+ignores case and surrounding whitespace. The labels in this dataset are already lowercase,
+so the results are the same.
 
 ## Assumptions and limitations
 
