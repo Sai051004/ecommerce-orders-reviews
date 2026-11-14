@@ -4,9 +4,11 @@ import json
 from pathlib import Path
 
 import pandas as pd
+from sklearn.metrics import precision_recall_fscore_support
 
 LABEL_COLUMNS = ["reference_label", "predicted_label"]
 ERROR_COLUMNS = ["review_id", "review_text", *LABEL_COLUMNS]
+SENTIMENT_LABELS = ["positive", "negative", "neutral", "mixed"]
 
 
 def load_reviews(file_path: str) -> pd.DataFrame:
@@ -51,6 +53,72 @@ def analyze_errors(df: pd.DataFrame) -> pd.DataFrame:
 
     wrong = ~is_correct(df)
     return df.loc[wrong, ERROR_COLUMNS].reset_index(drop=True)
+
+
+def _validated_labels(df: pd.DataFrame) -> tuple[list[str], list[str]]:
+    """Return (reference, predicted) labels, normalized and checked against SENTIMENT_LABELS.
+
+    Raises ValueError for empty input, missing columns, or any unsupported/missing label,
+    so no review is silently left out of the metrics.
+    """
+    if df.empty:
+        raise ValueError("Cannot calculate metrics: the dataset has no reviews")
+    missing_columns = [col for col in LABEL_COLUMNS if col not in df.columns]
+    if missing_columns:
+        raise ValueError(f"Missing required columns: {missing_columns}")
+
+    labels = {}
+    for column in LABEL_COLUMNS:
+        values = df[column].astype("string").str.strip().str.lower()
+        unexpected = values[~values.isin(SENTIMENT_LABELS)]
+        if not unexpected.empty:
+            raise ValueError(
+                f"Unsupported values in {column}: {unexpected.unique().tolist()}. "
+                f"Expected one of {SENTIMENT_LABELS}"
+            )
+        labels[column] = values.tolist()
+    return labels["reference_label"], labels["predicted_label"]
+
+
+def calculate_classification_metrics(df: pd.DataFrame) -> dict:
+    """Accuracy plus per-class, macro and weighted precision, recall and F1.
+
+    Classes are evaluated in the fixed order of SENTIMENT_LABELS. A metric that is
+    undefined (e.g. precision for a class that is never predicted) is reported as 0.
+    """
+    reference, predicted = _validated_labels(df)
+
+    precision, recall, f1, support = precision_recall_fscore_support(
+        reference, predicted, labels=SENTIMENT_LABELS, zero_division=0
+    )
+    per_class = {
+        label: {
+            "precision": float(precision[i]),
+            "recall": float(recall[i]),
+            "f1": float(f1[i]),
+            "support": int(support[i]),
+        }
+        for i, label in enumerate(SENTIMENT_LABELS)
+    }
+
+    averages = {}
+    for average in ("macro", "weighted"):
+        avg_precision, avg_recall, avg_f1, _ = precision_recall_fscore_support(
+            reference, predicted, labels=SENTIMENT_LABELS, average=average, zero_division=0
+        )
+        averages[average] = {
+            "precision": float(avg_precision),
+            "recall": float(avg_recall),
+            "f1": float(avg_f1),
+        }
+
+    return {
+        "labels": list(SENTIMENT_LABELS),
+        "accuracy": calculate_accuracy(df),
+        "per_class": per_class,
+        "macro": averages["macro"],
+        "weighted": averages["weighted"],
+    }
 
 
 if __name__ == "__main__":
