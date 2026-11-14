@@ -28,3 +28,12 @@ def is_correct(df: pd.DataFrame) -> pd.Series:
     predicted = df["predicted_label"].astype("string").str.strip().str.lower()
     return (reference == predicted).fillna(False).astype(bool)
 
+
+def calculate_accuracy(df: pd.DataFrame) -> float:
+    """Fraction of reviews whose predicted label matches the reference (0 to 1)."""
+    if df.empty:
+        raise ValueError("Cannot calculate accuracy: the dataset has no reviews")
+
+    correct = is_correct(df)
+    return float(correct.sum() / len(df))
+
